@@ -249,30 +249,43 @@ ggsave("图3c.置信区间_3.png", width=529/90, height = 276/90, dpi = 600, uni
 #_5_#######################################################################
 ##误差传递--------------------------------------------------------------
 library(tidyverse)
+library(reshape2)
 set.seed(114)
 m1 <- rnorm(100, mean = 0, sd = 0.10)
 m2 <- rnorm(100, mean = 2, sd = 0.10)
-r1 <- rnorm(100, mean = 2, sd = 0.20)
-r2 <- rnorm(100, mean = 2, sd = 0.1414)
+r1 <- rnorm(100, mean = 2, sd = 0.1414)
+r2 <- rnorm(100, mean = 2, sd = 0.20)
 m <- m2 - m1
 
-d <- data.frame(id =1:100, m1, m2, r1, r2, m)
+d <- data.frame( m1, m2, r1, r2, m)
 
-d1 <- gather(d, key="id")
-d1$variable <- factor(d1$id, 
-                      levels = c("m1", "m2", "r1", "r2","m"),
-                      labels =c("m1", "m2", "r1", "r2","m2 - m1"))
+d1 <- melt(d)
+d1$variable <- factor(d1$variable, 
+                      levels = c("m1", "m2", "m","r1", "r2"),
+                      labels =c("m1", "m2","m2 - m1", "r1", "r2"))
 
 ggplot(d1, aes(x=variable, y= value))+
   theme_bw()+
   geom_violin()+
   geom_jitter(width = 0.15, shape =1, size =1)+
-  annotate(geom ="text", x = 1.1, y = 0.4, label=expression( "  平均值 = 0 \n标准偏差 = 0.10") , size =3)+
-  annotate(geom ="text", x = 2.1, y = 2.5, label=expression( "  平均值 = 2 \n标准偏差 = 0.10") , size =3)+
-  annotate(geom ="text", x = 3.1, y = 2.8, label=expression( "  平均值 = 2 \n标准偏差 = 0.20") , size =3) +
-  annotate(geom ="text", x = 4.1, y = 1.3, label=expression( "  平均值 = 2 \n标准偏差 = 0.14") , size =3) +
+  annotate(geom ="text", x = 1.1, y = 0.4, label=expression( "  平均值 = 0.00 \n标准偏差 = 0.10") , size =3)+
+  annotate(geom ="text", x = 2.1, y = 2.5, label=expression( "  平均值 = 2.00 \n标准偏差 = 0.10") , size =3)+
+  annotate(geom ="text", x = 3, y = 2.7, label=expression( "?") , size =5)+
+  annotate(geom ="text", x = 4.1, y = 1.3, label=expression( "  平均值 = 2.00 \n标准偏差 = 0.14") , size =3) +
+  annotate(geom ="text", x = 5.1, y = 2.8, label=expression( "  平均值 = 2.00 \n标准偏差 = 0.20") , size =3) +
   scale_y_continuous(limits = c(-0.5,3.5))+
   xlab("")+
-  ylab("数值")
+  ylab("数值")+
+  geom_curve(x=3, xend=4, y=2.5, yend=2.5, curvature = -0.5,
+             arrow = arrow(length = unit(0.1, "inches"),
+                           type = "closed"))+
+  geom_curve(x=3, xend=5, y=1.3, yend=1.3, curvature = 0.5,
+             linetype="dashed",
+             arrow = arrow(length = unit(0.1, "inches"),
+                           type = "closed"))+
+  
+  scale_y_continuous(limits = c(-0.5,3.5))+
+  annotate(geom ="text", x = 3.5, y = 3, label="=" , size =5) +
+  annotate(geom ="text", x = 4, y = 0.5, label="≠" , size =5) 
 
 ggsave("图4.error_2.png", width = 415/90, height = 422/90, dpi =600, units = "in")
