@@ -1,24 +1,24 @@
-####################################################
+#_1_###################################################
 ##磷酸的pH值，解方程--------------------------------
+#输入已知条件
 Ka1 = 7.6E-3
 Ka2 = 6.3E-8
 Ka3 = 4.4E-13
 c = 0.20
-
-f <- function(H) {
+#定义三元酸H+浓度的精确计算式
+f = function(H) {
   #将分母命名为D
-  D = H^3 + H^2 * Ka1 + H * Ka1 * Ka2 + Ka1 * Ka2 * Ka3
-  H - (H^2 * Ka1* c / D + 2 * H * Ka1 * Ka2 * c / D + 3 * Ka1 * Ka2 * Ka3 * c / D)
+  D = H^3 + H^2*Ka1 + H*Ka1*Ka2 + Ka1*Ka2*Ka3  
+  H - 1E-14/H - (c*H^2*Ka1 + c*2*H*Ka1*Ka2 + c*3*Ka1*Ka2*Ka3)/D 
 }
-  
-H <- uniroot(f, interval = c(0, 0.6), tol = 10^-20)
-#根据H+浓度计算pH
-pH <- -log10(H$root)
+#运用uniroot函数解方程
+H = uniroot(f, interval = c(0, 0.6), tol = 10^-20)$root
+#根据H+浓度计算
+pH = -log10(H)
 pH
 
 
-
-####################################################
+#_2_###################################################
 ##H3PO4分布分数图----
 
 library(tidyverse)
@@ -36,7 +36,15 @@ delta_1 = H * Ka1 * Ka2 / D
 delta_2 = H^2 * Ka1 / D
 delta_3 = H^3 / D
 
+delta_0[delta_0 < 0.001] = NA  
+delta_1[delta_1 < 0.001] = NA 
+delta_2[delta_2 < 0.001] = NA 
+delta_3[delta_3 < 0.001] = NA 
+
+
 df_delta = data.frame(pH, delta_0, delta_1, delta_2, delta_3)
+
+
 
 ggplot(df_delta, aes(x = pH))+
   theme_bw()+
@@ -51,15 +59,15 @@ ggplot(df_delta, aes(x = pH))+
   annotate(geom = "text", x = 13, y=0.95, label = expression(PO[4]^"3-"))+
   ylab(expression(paste("分布分数", delta)))
   
-ggsave("H3PO4分布分数.png", width = 500/90, height = 279/90, dpi = 600, units = "in")  
+ggsave("图1.H3PO4分布分数.png", width = 500/90, height = 279/90, dpi = 600, units = "in")  
 
 
-#############################################################
+#_3_############################################################
 #络合滴定曲线
 #假设同浓度滴定，体积的变化1/(1+a)
 
 #设定金属离子和EDTA溶液的分析浓度
-c = 0.1
+cM = 0.1
 #设定条件稳定常数值
 KMY = 1E14
 
@@ -72,11 +80,11 @@ pM = numeric(200)
 #针对每一个滴定分数值，需通过解方程计算对应的pM值，此处运用循环语句
 for (i in 1 : 200) {
   f <- function(x) {
-  a <<- a_seq[i]
-  KMY <<- KMY
-  c <<- c
-  #此为络合滴定曲线方程
-  KMY*x^2+(KMY*c/(1+a)*(a-1)+1)*x-c/(1+a)
+    a <<- a_seq[i]
+    KMY <<- KMY
+    cM <<- cM
+    #此为络合滴定曲线方程
+    KMY*x^2+(KMY*cM/(1+a)*(a-1)+1)*x-cM/(1+a)
   }
   #将方程的根存入名为RT的变量  
   RT = uniroot(f, interval = c(1E-20, 0.1), tol=1E-20)
@@ -86,24 +94,159 @@ for (i in 1 : 200) {
 }
 
 #将以上200个滴定分数值与对应的pM值合并成数据表，命名为luohe
-luohe <- data.frame(a = a_seq, pM = pM)
+df <- data.frame(a = a_seq, pM = pM)
 
 #调用作图所需软件包ggplot2
 library(tidyverse)
 
 #作图
-ggplot(luohe, aes(x = a, y = pM))+
+ggplot(df, aes(x = a, y = pM))+
   theme_bw()+
   geom_line()+
-  xlab("滴定分数")+
+  labs(x="滴定分数", y="pM'")+
   scale_x_continuous(breaks = seq(0, 2, 0.2))+
   scale_y_continuous(breaks = seq(0, 16, 2))
 
 
-ggsave("complexation titration curve.png", width = 399/90, height = 310/90, dpi = 600, units = "in")
+## 化学计量点
+
+f_sp <- function(x) {
+  a = 1
+  KMY <<- KMY
+  cM <<- cM
+  #此为络合滴定曲线方程
+  KMY*x^2+(KMY*cM/(1+a)*(a-1)+1)*x-cM/(1+a)
+}
+#将方程的根存入名为RT的变量  
+RT_sp <- uniroot(f_sp, interval = c(1E-20, 0.1), tol=1E-20)$root
+PMsp <- -log10(RT_sp)
+PMsp
 
 
-########################################################################
+## 滴定突跃
+
+f_1001 <- function(x) {
+  a = 1.001
+  KMY <<- KMY
+  cM <<- cM
+  #此为络合滴定曲线方程
+  KMY*x^2+(KMY*cM/(1+a)*(a-1)+1)*x-cM/(1+a)
+}
+#将方程的根存入名为RT的变量  
+RT_1001 <- uniroot(f_1001, interval = c(1E-20, 0.1), tol=1E-20)$root
+PM_1001 <- -log10(RT_1001)
+PM_1001
+
+
+f_999 <- function(x) {
+  a = 0.999
+  KMY <<- KMY
+  cM <<- cM
+  #此为络合滴定曲线方程
+  KMY*x^2+(KMY*cM/(1+a)*(a-1)+1)*x-cM/(1+a)
+}
+#将方程的根存入名为RT的变量  
+RT_999 <- uniroot(f_999, interval = c(1E-20, 0.1), tol=1E-20)$root
+PM_999 <- -log10(RT_999)
+PM_999
+
+##添加化学计量点和滴定突跃范围
+ggplot(df, aes(x = a, y = pM))+
+  theme_bw()+
+  geom_line()+
+  labs(x="滴定分数", y="pM'")+
+  scale_x_continuous(breaks = seq(0, 2, 0.2))+
+  scale_y_continuous(breaks = seq(0, 16, 2))+
+  geom_point(shape=16, x=1, y=PMsp,color="red2")+
+  geom_point(shape=3, x=0.999, y=PM_999, color="red2")+
+  geom_point(shape=3, x=1.001, y=PM_1001,color="red2")
+
+
+
+ggsave("图2.complexation titration curve.png", width = 399/90, height = 310/90, dpi = 600, units = "in")
+
+
+
+#_4_##############################################
+##T检验 系统误差 置信区间-------------------------------------------
+library(tidyverse)
+library(ggrepel)
+
+x <- c(10.74, 10.77,10.77,10.77,10.81,10.82,10.73,10.86,10.81)
+
+fit <- t.test(x, mu = 10.77, conf.level = 0.95)
+
+CI <- fit$conf.int[1:2]
+
+ggplot(data.frame(x), aes(x, y=0))+
+  theme_minimal()+
+  geom_rect(xmin=CI[1], xmax=CI[2], ymin=-0.01, ymax=0.01, fill="grey90",color="black", size = 0.1)+
+  geom_point(alpha = 1/3)+
+  geom_text_repel(label=x, nudge_y=0.01)+
+  geom_point(x=10.77, y=0, shape= 1, size =4, stroke =1.5)+
+  annotate(x=10.77, y=-0.024, geom="text", label="理论值\n10.77",fontface="bold")+
+  annotate(x=10.80, y=-0.02, geom="text", label="平均值的95%置信区间", size = 3)+
+  ylim(-0.1, 0.1)+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        panel.grid = element_blank())+
+  geom_hline(yintercept = 0)+
+  annotate(x=10.73, y=0.04, geom="text", label="(a)",fontface="bold")
+
+ggsave("图3a.置信区间.png", width=529/90, height = 276/90, dpi = 600, units = "in")
+
+####----------------------------------------------------------------------------
+#另外假设一组数据存在系统误差，各数均减去0.5
+x_2 = x - 0.05 #原数据各减去0.05
+t.test(x_2, mu = 10.77, conf.level = 0.95)
+
+fit_2 <- t.test(x_2, mu = 10.77, conf.level = 0.95)
+
+
+ggplot(data.frame(x_2), aes(x_2, y=0))+
+  theme_minimal()+
+  geom_rect(xmin=fit_2$conf.int[1], xmax=fit_2$conf.int[2], ymin=-0.01, ymax=0.01, fill="grey90",color="black", size = 0.1)+
+  geom_point(alpha = 1/3)+
+  geom_text_repel(label=x_2, nudge_y=0.01)+
+  geom_point(x=10.77, y=0, shape= 1, size =4, stroke =1.5)+
+  annotate(x=10.77, y=-0.024, geom="text", label="理论值\n10.77",fontface="bold")+
+  annotate(x=10.73, y=-0.02, geom="text", label="平均值的95%置信区间", size = 3)+
+  ylim(-0.1, 0.1)+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        panel.grid = element_blank())+
+  geom_hline(yintercept = 0)+
+  annotate(x=10.68, y=0.04, geom="text", label="(b)",fontface="bold")
+ggsave("图3b.置信区间_2.png", width=529/90, height = 276/90, dpi = 600, units = "in")
+
+####----------------------------------------------------------------------------
+#置信度改为99%
+x_2 = x - 0.05 #原数据各减去0.05
+t.test(x_2, mu = 10.77, conf.level = 0.99)
+
+fit_3 <- t.test(x_2, mu = 10.77, conf.level = 0.99)
+
+
+ggplot(data.frame(x_2), aes(x_2, y=0))+
+  theme_minimal()+
+  geom_rect(xmin=fit_3$conf.int[1], xmax=fit_3$conf.int[2], ymin=-0.01, ymax=0.01, fill="grey90",color="black", size = 0.1)+
+  geom_point(alpha = 1/3)+
+  geom_text_repel(label=x_2, nudge_y=0.01)+
+  geom_point(x=10.77, y=0, shape= 1, size =4, stroke =1.5)+
+  annotate(x=10.77, y=-0.024, geom="text", label="理论值\n10.77",fontface="bold")+
+  annotate(x=10.73, y=-0.02, geom="text", label="平均值的99%置信区间", size = 3)+
+  ylim(-0.1, 0.1)+
+  theme(axis.text = element_blank(),
+        axis.title = element_blank(),
+        panel.grid = element_blank())+
+  geom_hline(yintercept = 0)+
+  annotate(x=10.68, y=0.04, geom="text", label="(b)",fontface="bold")
+
+ggsave("图3c.置信区间_3.png", width=529/90, height = 276/90, dpi = 600, units = "in")
+
+
+
+#_5_#######################################################################
 ##误差传递--------------------------------------------------------------
 library(tidyverse)
 set.seed(114)
@@ -132,87 +275,4 @@ ggplot(d1, aes(x=variable, y= value))+
   xlab("")+
   ylab("数值")
 
-ggsave("error_2.png", width = 415/90, height = 422/90, dpi =600, units = "in")
-
-
-
-###############################################
-##T检验 系统误差 置信区间-------------------------------------------
-library(tidyverse)
-library(ggrepel)
-
-x <- c(10.74, 10.77,10.77,10.77,10.81,10.82,10.73,10.86,10.81)
-
-fit <- t.test(x, mu = 10.77, conf.level = 0.95)
-
-CI <- fit$conf.int[1:2]
-
-ggplot(data.frame(x), aes(x, y=0))+
-  theme_minimal()+
-  geom_rect(xmin=CI[1], xmax=CI[2], ymin=-0.01, ymax=0.01, fill="grey90",color="black", size = 0.1)+
-  geom_point(alpha = 1/3)+
-  geom_text_repel(label=x, nudge_y=0.01)+
-  geom_point(x=10.77, y=0, shape= 1, size =4, stroke =1.5)+
-  annotate(x=10.77, y=-0.024, geom="text", label="理论值\n10.77",fontface="bold")+
-  annotate(x=10.80, y=-0.02, geom="text", label="平均值的95%置信区间", size = 3)+
-  ylim(-0.1, 0.1)+
-  theme(axis.text = element_blank(),
-        axis.title = element_blank(),
-        panel.grid = element_blank())+
-  geom_hline(yintercept = 0)+
-  annotate(x=10.73, y=0.04, geom="text", label="(a)",fontface="bold")
-
-ggsave("置信区间.png", width=529/90, height = 276/90, dpi = 600, units = "in")
-
-####----------------------------------------------------------------------------
-#另外假设一组数据存在系统误差，奇数位上的数减去1
-x <- c(9.74, 10.77,9.77,10.77,9.81,10.82,9.73,10.86,9.81)
-n = length(x)
-
-fit <- t.test(x, mu = 10.77, conf.level = 0.95)
-t.test(x, mu = 10.77, conf.level = 0.95)
-
-
-ggplot(data.frame(x), aes(x, y=0))+
-  theme_minimal()+
-  geom_rect(xmin=fit$conf.int[1], xmax=fit$conf.int[2], ymin=-0.01, ymax=0.01, fill="grey90",color="black", size = 0.1)+
-  geom_point(alpha = 1/3)+
-  geom_text_repel(label=x, nudge_y=0.01)+
-  geom_point(x=10.77, y=0, shape= 1, size =4, stroke =1.5)+
-  annotate(x=10.77, y=-0.024, geom="text", label="理论值\n10.77",fontface="bold")+
-  annotate(x=10.25, y=-0.02, geom="text", label="平均值的95%置信区间", size = 3)+
-  ylim(-0.1, 0.1)+
-  theme(axis.text = element_blank(),
-        axis.title = element_blank(),
-        panel.grid = element_blank())+
-  geom_hline(yintercept = 0)+
-  annotate(x=9.73, y=0.04, geom="text", label="(b)",fontface="bold")
-
-ggsave("置信区间_2.png", width=529/90, height = 276/90, dpi = 600, units = "in")
-
-##-------------------------------------------------------------------------------
-##T检验 未采用可视化方案
-x <- c(10.74, 10.77,10.77,10.77,10.81,10.82,10.73,10.86,10.81)
-
-t.test(x, mu = 10.77, conf.level = 0.95)
-
-fit_x <- seq(-4,4, length.out=100)
-fit_y <- dt(fit_x, df=8)
-
-d <- data.frame(fit_x, fit_y)
-ggplot(d, aes(fit_x, fit_y))+
-  theme_bw()+
-  geom_line()+
-  
-  geom_vline(xintercept = 0, linetype = 2, size=0.7)+
-  geom_point(data=data.frame(x),aes((x-10.77)/sd(x)), y=0, alpha=1/3)+
-  xlab(expression(italic(t)==frac("测定值-理论值","样本标准偏差")))+
-  ylab("概率密度")+
-  geom_ribbon(data=subset(d, fit_x < qt(0.025, 8) ),aes(ymin=0,ymax=fit_y), fill = "grey80")+
-  geom_ribbon(data=subset(d, fit_x > qt(0.975, 8) ),aes(ymin=0,ymax=fit_y), fill = "grey80")+
-  annotate(x=-2.71, y=0.01, geom="text", label="2.5%", size=2.5)+
-  annotate(x=2.73, y=0.01, geom="text", label="2.5%", size =2.5)+
-  annotate(x=2.2, y=0.25, geom="text", label="自由度 = 8")
-
-ggsave("t分布.png", width = 332/90, height = 417/90, dpi =600, units = "in")
-
+ggsave("图4.error_2.png", width = 415/90, height = 422/90, dpi =600, units = "in")
